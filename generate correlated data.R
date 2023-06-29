@@ -1,13 +1,16 @@
 
 ######################################## README ########################################
 
-# title: "Generate synthetic trial data (simulate correlated data)"
+# title: "Generate synthetic data in R"
 # author: "Ron Handels"
-# date: '2022-11-10'
+# date: '2023-06-25'
 # developers: 
   # Ron Handels
   # Linus Jonsson
   # Lars Lau Raket
+
+# Do this manually before running this code: 
+# - Change the working directory. 
 
 
 
