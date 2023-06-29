@@ -1,7 +1,9 @@
 
-# title: "Generate synthetic correlated data"
+######################################## README ########################################
+
+# title: "Generate synthetic trial data (simulate correlated data)"
 # author: "Ron Handels"
-# date: '2023-06-25'
+# date: '2022-11-10'
 # developers: 
   # Ron Handels
   # Linus Jonsson
@@ -13,8 +15,7 @@
 
 cat("\014") # clear console
 rm(list = ls()) # clear environment
-setwd("C:/users/Ron/surfdrive/PhD/PAPERS/IPECAD workshop 2023/synthetic trial data/github") # working directory; (USER-INPUT REQUIRED: please change to your prefered location)
-#setwd("D:/surfdrive/PhD/PAPERS/IPECAD workshop 2023/synthetic trial data/github") # working directory; (USER-INPUT REQUIRED: please change to your prefered location)
+setwd("D:/surfdrive/PhD/PAPERS/IPECAD workshop 2023/synthetic trial data/github") # working directory; (USER-INPUT REQUIRED: please change to your prefered location)
 
 
 
@@ -51,9 +52,9 @@ f.rescale01_back <- function(x, min, max) {
 
 
 
-######################################## OPEN ORIGINAL DATA ########################################
+######################################## STEP 1: OPEN ORIGINAL DATA ########################################
 
-# open original data to be replicated ( alternatively, data can be generated using user-inputs in the 'm.out' in the next steps)
+# open original data to be replicated
 d_orig <- as.matrix(read.csv(file = "original_data.csv", header = TRUE))
 
 # store column names of continuous variables
@@ -71,7 +72,7 @@ v.varscat <- c(
 
 
 
-######################################## DESCRIBE ORIGINAL DATA ########################################
+######################################## STEP 2: DESCRIBE ORIGINAL DATA ########################################
 
 # number of variables
 n.varscon <- length(v.varscon)
@@ -117,18 +118,18 @@ m.out["round2",c("ABETA0","ABETA1","ABETA2")] <- 0
 
 ######################################## RESCALE ORIGINAL DATA AND STORE DISTRIBUTION PARAMETERS ########################################
 
-# rescale variables (continuous)
+# STEP 3: rescale variables (continuous)
 d_orig_rs <- d_orig # create empty structure with same dimensions and variable names (part 1/2)
 d_orig_rs[,] <- NA # create empty structure with same dimensions and variable names (part 2/2); these 2 steps are applied multiple times below
 for (i in v.varscon) d_orig_rs[,i] <- f.rescale01(x = d_orig[,i], min = m.out["min_th",i], max = m.out["max_th",i])
 
-# estimate beta distribution parameters (continuous)
+# STEP 4: estimate beta distribution parameters (continuous)
 for (i in v.varscon) {
   m.out["shape1",i] <- f.betamm(mu = mean(d_orig_rs[,i], na.rm = TRUE), var = var(d_orig_rs[,i], na.rm = TRUE))[["alpha"]] # estimate beta distribution parameter
   m.out["shape2",i] <- f.betamm(mu = mean(d_orig_rs[,i], na.rm = TRUE), var = var(d_orig_rs[,i], na.rm = TRUE))[["beta"]] # estimate beta distribution parameter
 }
 
-# convert to probability cumulative density function (CDF)
+# STEP 5: convert to probability cumulative density function (CDF)
 d_orig_cdf <- d_orig_rs
 d_orig_cdf[,] <- NA
 for (i in v.varscon) d_orig_cdf[,i] <- pbeta(q = d_orig_rs[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i]) # convert to cumulative density function (continuous)
@@ -138,22 +139,20 @@ d_orig_cdf2 <- d_orig_cdf
 d_orig_cdf2[d_orig_cdf2==1] <- 0.9999 # replace 1 to near-1 (otherwise invalid values when back-transformed)
 d_orig_cdf2[d_orig_cdf2==0] <- 0.0001 # replace 0 to near-0 (otherwise invalid values when back-transformed)
 
-# convert to normal distribution
+# STEP 6: convert to normal distribution
 d_orig_norm <- d_orig_cdf2
 d_orig_norm[,] <- NA
 for (i in 1:n.vars) d_orig_norm[,i] <- qnorm(p = d_orig_cdf2[,i], mean = 0, sd = 1) # convert to estimate on normal distribution
 
-# estimate variance-covariance matrix
+# STEP 7: estimate variance-covariance matrix
 m.cor_orig_norm <- cor(d_orig_norm, use = "pairwise.complete.obs")
 
 
 
 ######################################## GENERATE SYNTHETIC DATA ########################################
 
-# size of simulated data
-n.sim <- 10000
-
-# simulate from variance-covariance matrix
+# STEP 8: simulate from variance-covariance matrix
+n.sim <- 10000 # size of simulated data
 m.chol <- chol(m.cor_orig_norm) # Cholesky decomposition (for details, see for example https://towardsdatascience.com/behind-the-models-cholesky-decomposition-b61ef17a65fb )
   # eigen(m.cor_orig_norm)$values # optional check
   # isSymmetric(m.cor_orig_norm) # optional check
@@ -165,17 +164,17 @@ v.means <- colMeans(x = d_orig_norm, na.rm = TRUE) # estimate means from origina
 v.means[v.varscat] <- 0 # replace mean to 0 for categorical variables (to keep normal distribution with mean=1)
 d_sim_norm <- t( t(m.chol) %*% t(m.rnorm) * v.sds + v.means ) # generate correlated data from random normal data, standard deviations and means
 
-# backtransform to probability CDF
+# STEP 9: backtransform to probability CDF
 d_sim_cdf <- d_sim_norm
 d_sim_cdf[,] <- NA
 for (i in 1:n.vars) d_sim_cdf[,i] <- pnorm(q = d_sim_norm[,i], mean = 0, sd = 1)
 
-# backtransform to beta distribution (continuous)
+# STEP 10: backtransform to beta distribution (continuous)
 d_sim_brs <- d_sim_norm
 d_sim_brs[,] <- NA
 for (i in v.varscon) d_sim_brs[,i] <- qbeta(p = d_sim_cdf[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i])
 
-# transform to original values
+# STEP 11: transform to original values
 d_sim <- d_sim_brs
 d_sim[,] <- NA
 # back-rescale from 0-1 range (continuous)
@@ -192,14 +191,14 @@ for (i in v.varscat) {
 for (i in v.varscon) d_sim[,i] <- round(x = d_sim[,i] * (1/m.out["round1",i]), digits = m.out["round2",i]) * m.out["round1",i]
 
 # save simulated data
-write.csv(x=d_sim, file="synthetic_data.csv", row.names=FALSE)
+#write.csv(x=d_sim, file="synthetic_data.csv", row.names=FALSE)
 
 
 
 ######################################## COMPARE TO ORIGINAL DATA ########################################
 
 # open data
-d_sim <- read.csv(file="synthetic_data.csv")
+#d_sim <- read.csv(file="synthetic_data.csv")
 
 # plot distribution of original and simulated data
 uni01 <- seq(0,1,0.001)
