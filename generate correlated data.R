@@ -283,3 +283,8 @@ legend(
   cex = 0.70
 )
 
+# some other statistics
+mean(m.cor_dif, na.rm=TRUE); sd(m.cor_dif, na.rm=TRUE); min(m.cor_dif, na.rm=TRUE); max(m.cor_dif, na.rm=TRUE)
+summary(c(m.cor_dif))
+quantile(x=m.cor_dif, probs=c(0.5,0.95), na.rm=TRUE)
+hist(m.cor_dif)
