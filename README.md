@@ -32,7 +32,7 @@ ADCOMS) and
 ![image](https://github.com/ronhandels/synthetic-correlated-data/assets/58787973/f86d9cdb-7bb0-4d26-b512-494ce84f5a92)
 
 ## More details
-See file [poster syntehtic data ISPOR.pdf](poster%20synthetic%20data%20ISPOR%202023.pdf) for details and supporting figures on an application. 
+See file [poster syntehtic data ISPOR.pdf](poster%20synthetic%20data%20ISPOR%202023.pdf) for details and supporting figures on an application, accepted at [www.ispor.org](https://www.ispor.org/) conference in Copenhagen 2023. 
 
 ## Limitations
 
