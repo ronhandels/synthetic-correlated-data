@@ -18,13 +18,13 @@
 
 cat("\014") # clear console
 rm(list = ls()) # clear environment
-setwd("D:/surfdrive/PhD/PAPERS/IPECAD workshop 2023/synthetic trial data/github") # working directory; (USER-INPUT REQUIRED: please change to your prefered location)
+setwd("C:/Users/ron.handels/Documents/GitHub/synthetic-correlated-data") # working directory; (USER-INPUT REQUIRED: please change to your prefered location)
 
 
 
 ######################################## FUNCTIONS ########################################
 
-# Convert categorical variable to cumulative probabilities (NA not used / ignored).
+# transform categorical variable to cumulative probabilities (NA not used / ignored).
 f.cumsumcat <- function(x) {
   frequency <- table(x, useNA = "no") # vector of frequencies of categorical variable
   probability <- frequency / sum(!is.na(x)) # vector of probabilities of categorical variable
@@ -121,7 +121,7 @@ m.out["round2",c("ABETA0","ABETA1","ABETA2")] <- 0
 
 ######################################## RESCALE ORIGINAL DATA AND STORE DISTRIBUTION PARAMETERS ########################################
 
-# STEP 3: rescale variables (continuous)
+# STEP 3: re-scale to 0-1 range (continuous)
 d_orig_rs <- d_orig # create empty structure with same dimensions and variable names (part 1/2)
 d_orig_rs[,] <- NA # create empty structure with same dimensions and variable names (part 2/2); these 2 steps are applied multiple times below
 for (i in v.varscon) d_orig_rs[,i] <- f.rescale01(x = d_orig[,i], min = m.out["min_th",i], max = m.out["max_th",i])
@@ -132,20 +132,20 @@ for (i in v.varscon) {
   m.out["shape2",i] <- f.betamm(mu = mean(d_orig_rs[,i], na.rm = TRUE), var = var(d_orig_rs[,i], na.rm = TRUE))[["beta"]] # estimate beta distribution parameter
 }
 
-# STEP 5: convert to probability cumulative density function (CDF)
+# STEP 5: transform to cumulative probability distribution function (CDF)
 d_orig_cdf <- d_orig_rs
 d_orig_cdf[,] <- NA
-for (i in v.varscon) d_orig_cdf[,i] <- pbeta(q = d_orig_rs[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i]) # convert to cumulative density function (continuous)
-for (i in v.varscat) d_orig_cdf[,i] <- f.cumsumcat(x = d_orig[,i]) # convert to probability (categorical); alternative: pbinom(q = d_origcat[,"SEX"], size = 1, prob = mean(d_origcat[,"SEX"], na.rm = TRUE))
+for (i in v.varscon) d_orig_cdf[,i] <- pbeta(q = d_orig_rs[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i]) # transform to cumulative probability distribution function (continuous)
+for (i in v.varscat) d_orig_cdf[,i] <- f.cumsumcat(x = d_orig[,i]) # transform to cumulative probability (categorical); alternative: pbinom(q = d_origcat[,"SEX"], size = 1, prob = mean(d_origcat[,"SEX"], na.rm = TRUE))
 # replace 0 and 1 to near 0 and near 1
 d_orig_cdf2 <- d_orig_cdf
 d_orig_cdf2[d_orig_cdf2==1] <- 0.9999 # replace 1 to near-1 (otherwise invalid values when back-transformed)
 d_orig_cdf2[d_orig_cdf2==0] <- 0.0001 # replace 0 to near-0 (otherwise invalid values when back-transformed)
 
-# STEP 6: convert to normal distribution
+# STEP 6: transform to normal distribution
 d_orig_norm <- d_orig_cdf2
 d_orig_norm[,] <- NA
-for (i in 1:n.vars) d_orig_norm[,i] <- qnorm(p = d_orig_cdf2[,i], mean = 0, sd = 1) # convert to estimate on normal distribution
+for (i in 1:n.vars) d_orig_norm[,i] <- qnorm(p = d_orig_cdf2[,i], mean = 0, sd = 1) # transform to estimate on normal distribution
 
 # STEP 7: estimate variance-covariance matrix
 m.cor_orig_norm <- cor(d_orig_norm, use = "pairwise.complete.obs")
@@ -160,29 +160,29 @@ m.chol <- chol(m.cor_orig_norm) # Cholesky decomposition (for details, see for e
   # eigen(m.cor_orig_norm)$values # optional check
   # isSymmetric(m.cor_orig_norm) # optional check
 set.seed(38567)
-m.rnorm <- matrix(data = rnorm(n = n.vars * n.sim), nrow = n.sim, dimnames=list(NULL,colnames(m.chol))) # generate independent random data from normal distribution (other column order)
+m.rnorm <- matrix(data = rnorm(n = n.vars * n.sim, mean = 0, sd = 1), nrow = n.sim, dimnames=list(NULL,colnames(m.chol))) # generate independent random data from normal distribution (other column order)
 v.sds <- apply(X = d_orig_norm, MARGIN = 2, FUN = sd, na.rm = TRUE) # estimate standard deviations from original data on normal scale
 v.sds[v.varscat] <- 1 # replace SD to 1 for categorical variables (to keep normal distribution with sd=1)
 v.means <- colMeans(x = d_orig_norm, na.rm = TRUE) # estimate means from original data on normal scale
 v.means[v.varscat] <- 0 # replace mean to 0 for categorical variables (to keep normal distribution with mean=1)
 d_sim_norm <- t( t(m.chol) %*% t(m.rnorm) * v.sds + v.means ) # generate correlated data from random normal data, standard deviations and means
 
-# STEP 9: backtransform to probability CDF
+# STEP 9: transform to cumulative probability distribution function (CDF)
 d_sim_cdf <- d_sim_norm
 d_sim_cdf[,] <- NA
 for (i in 1:n.vars) d_sim_cdf[,i] <- pnorm(q = d_sim_norm[,i], mean = 0, sd = 1)
 
-# STEP 10: backtransform to beta distribution (continuous)
+# STEP 10: transform to beta distribution (continuous)
 d_sim_brs <- d_sim_norm
 d_sim_brs[,] <- NA
 for (i in v.varscon) d_sim_brs[,i] <- qbeta(p = d_sim_cdf[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i])
 
-# STEP 11: transform to original values
+# STEP 11: re-scale to original range
 d_sim <- d_sim_brs
 d_sim[,] <- NA
-# back-rescale from 0-1 range (continuous)
+# continuous
 for (i in v.varscon) d_sim[,i] <- f.rescale01_back(x = d_sim_brs[,i], min = m.out["min_th",i], max = m.out["max_th",i])
-# transform to categories (categorical)
+# categorical
 for (i in v.varscat) {
   proportions <- table(d_orig[,i], useNA = "no")/sum(table(d_orig[,i], useNA = "no"))
   out <- cut(x = d_sim_cdf[,i], breaks = cumsum(c(0, proportions)), include.lowest = TRUE, labels = FALSE)
