@@ -1,7 +1,7 @@
 on:
   schedule: 
-    # runs once a week on sunday
-    - cron: "*/5 * * * *"
+    # see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule for details
+    - cron: "50 23 * * *"
     
 jobs:
   # This workflow contains a single job called "traffic"
