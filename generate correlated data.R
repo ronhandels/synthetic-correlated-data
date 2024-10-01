@@ -10,7 +10,7 @@
   # Lars Lau Raket
 
 # Do this manually before running this code: 
-# - Change the working directory. 
+# - Please manually adjust the working directory in this code, which is marked by the comment "USER-INPUT REQUIRED" under the heading "PREPARE". 
 
 
 
@@ -126,13 +126,13 @@ d_orig_rs <- d_orig # create empty structure with same dimensions and variable n
 d_orig_rs[,] <- NA # create empty structure with same dimensions and variable names (part 2/2); these 2 steps are applied multiple times below
 for (i in v.varscon) d_orig_rs[,i] <- f.rescale01(x = d_orig[,i], min = m.out["min_th",i], max = m.out["max_th",i])
 
-# STEP 4: estimate beta distribution parameters (continuous)
+# STEP 4: estimate beta distribution shape parameters (method of moments; continuous)
 for (i in v.varscon) {
   m.out["shape1",i] <- f.betamm(mu = mean(d_orig_rs[,i], na.rm = TRUE), var = var(d_orig_rs[,i], na.rm = TRUE))[["alpha"]] # estimate beta distribution parameter
   m.out["shape2",i] <- f.betamm(mu = mean(d_orig_rs[,i], na.rm = TRUE), var = var(d_orig_rs[,i], na.rm = TRUE))[["beta"]] # estimate beta distribution parameter
 }
 
-# STEP 5: transform to cumulative probability distribution function (CDF)
+# STEP 5: transform to cumulative probability distribution function (CDF) (using shape parameters; continuous) and to cumulative probability (categorical)
 d_orig_cdf <- d_orig_rs
 d_orig_cdf[,] <- NA
 for (i in v.varscon) d_orig_cdf[,i] <- pbeta(q = d_orig_rs[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i]) # transform to cumulative probability distribution function (continuous)
@@ -142,7 +142,7 @@ d_orig_cdf2 <- d_orig_cdf
 d_orig_cdf2[d_orig_cdf2==1] <- 0.9999 # replace 1 to near-1 (otherwise invalid values when back-transformed)
 d_orig_cdf2[d_orig_cdf2==0] <- 0.0001 # replace 0 to near-0 (otherwise invalid values when back-transformed)
 
-# STEP 6: transform to normal distribution
+# STEP 6: transform to a normal distribution (using quantile function, i.e., inverse cumulative distribution function)
 d_orig_norm <- d_orig_cdf2
 d_orig_norm[,] <- NA
 for (i in 1:n.vars) d_orig_norm[,i] <- qnorm(p = d_orig_cdf2[,i], mean = 0, sd = 1) # transform to estimate on normal distribution
@@ -154,7 +154,7 @@ m.cor_orig_norm <- cor(d_orig_norm, use = "pairwise.complete.obs")
 
 ######################################## GENERATE SYNTHETIC DATA ########################################
 
-# STEP 8: simulate from variance-covariance matrix
+# STEP 8: generate random correlated normal data (mean=0, SD=1) using Cholesky decomposition of variance-covariance matrix from step 7
 n.sim <- 10000 # size of simulated data
 m.chol <- chol(m.cor_orig_norm) # Cholesky decomposition (for details, see for example https://towardsdatascience.com/behind-the-models-cholesky-decomposition-b61ef17a65fb )
   # eigen(m.cor_orig_norm)$values # optional check
@@ -172,12 +172,12 @@ d_sim_cdf <- d_sim_norm
 d_sim_cdf[,] <- NA
 for (i in 1:n.vars) d_sim_cdf[,i] <- pnorm(q = d_sim_norm[,i], mean = 0, sd = 1)
 
-# STEP 10: transform to beta distribution (continuous)
+# STEP 10: transform to beta distribution (using quantile function, i.e., inverse cumulative distribution function) (using beta distribution shape parameters from step 4; continuous)
 d_sim_brs <- d_sim_norm
 d_sim_brs[,] <- NA
 for (i in v.varscon) d_sim_brs[,i] <- qbeta(p = d_sim_cdf[,i], shape1 = m.out["shape1",i], shape2 = m.out["shape2",i])
 
-# STEP 11: re-scale to original range
+# STEP 11: re-scale to original range (using minimum and maximum and proportions from step 2)
 d_sim <- d_sim_brs
 d_sim[,] <- NA
 # continuous
